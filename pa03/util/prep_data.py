@@ -108,5 +108,6 @@ def prep_data(datadir, ratings_file, numratings=10000):
 
     # fix indexing
     ratings.index = np.arange(ratings.shape[0])
+    ratings=ratings.dropna(axis=1,how='all')
     return ratings
 
