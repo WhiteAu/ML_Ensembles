@@ -12,6 +12,19 @@ class BootStrap(object):
         self.prediction_vals = pred
         self.numfolds = numfolds
 
+    def create_bags(self, data, num=self.numfolds):
+        N = len(data)
+        rd.seed()
+        bags = []
+        for k in range(num):
+            b = []
+            for n in range(N):
+                idx = rd.random()%N #get random index
+
+                b.append(data[idx])
+            bags.append(b)
+        return bags
+        
     def evaluate(self, truth_vals, pred_vals, num=self.numfolds):
         
         if (len(truth_vals) != len(pred_vals)):
@@ -32,8 +45,8 @@ class BootStrap(object):
                 pred.append(pred_vals[idx])
             scores.append(f_score(truth, pred))#append our f-score to the scores
 
-        mean = None
-        std = None
+        mean = np.mean(scores)
+        std = np.std(scores)
         return (mean, std)
                 
 def f_score(truth, pred):
@@ -63,3 +76,5 @@ def f_score(truth, pred):
         return None
 
             
+    
+
