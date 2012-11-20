@@ -100,28 +100,17 @@ def get_item_neighborhood(ids, ratings, itemid, itemids, size, norms):
             
         if otheritemid not in hash:
             hash[otheritemid] = 0
-        x = ratings[(userid,itemid)]
-        y = ratings[(userid,otheritemid)]
-        hash[otheritemid] += x*y 
+        #x = ratings[(userid,itemid)]
+        #y = ratings[(userid,otheritemid)]
         
+        hash[otheritemid] += rating * ratings[(userid,itemid)]
+        #print hash[otheritemid]
         
     for (iid, val) in hash.iteritems():
         nx = norms[itemid]
         ny = norms[iid]
         hash[iid] = hash[iid]/float(nx*ny)
-    
-    
-        
 
-        #x = ratings[(ids.ix[itemid]['userid'],ids.ix[item]['itemid'])]
-        #y = ratings[(ids.ix[other]['userid'],ids.ix[other]['itemid'])]
-        #hash[item][other] = x.dot(y) / float(np.sqrt(x.dot(x))*np.sqrt(y.dot(y))) #check this line 
-            
-            #print 'x dot y is: %f'%(x.dot(y))
-            #print 'x_2 dot y_2 is: %f' %(np.sqrt(x.dot(x))*np.sqrt(y.dot(y)))
-            #print 'hash[%d][%d] is: %f' %(i, other, hash[i][o])
-        
-            #the below needs to be per item
     indx = np.argsort(-np.array(hash.values()))[:size]
     items= np.array(hash.keys())[indx]
     weights = np.array(hash.values())[indx]
@@ -163,7 +152,7 @@ class CFilter(object):
         """
         self.size = size
         self.ratings = make_ratings_hash(ratings)
-        self.items = make_item_ratings_hash(ratings)
+        #self.items = make_item_ratings_hash(ratings)
         print 'Done making item ratings'
         self.data = ratings
 
@@ -178,7 +167,7 @@ class CFilter(object):
        
         self.neighbors, self.weights = make_neighborhood_hash(userids, self.ratings, size, norms)
         print 'Done making regular neighborhood hash'
-        self.items, self.item_weights = make_item_hash(ids, userids, itemids, self.items, itemsize, itemnorms)
+        self.items, self.item_weights = make_item_hash(ids, userids, itemids, self.ratings, itemsize, itemnorms)
         print 'Done making items hash'
 
     def __repr__(self):
@@ -218,6 +207,7 @@ class CFilter(object):
                     ouid = self.neighbors[userid][j]
                     if (ouid, itemid) in self.ratings:
                         nratings[i,j] = self.ratings[(ouid,itemid)]
+                        #print self.weights[userid][j]
                         w[i,j] = self.weights[userid][j]
 
             sw = np.sum(w,axis=1)
@@ -254,26 +244,31 @@ class CFilter(object):
             if np.sum(indx)==0:
                 continue
 
-            items = ratings['userid'][indx].values
-            m = len(items)
+            users = ratings['userid'][indx].values
+            #print users
+            m = len(users)
             n = len(self.items[iid])
 
             nratings=np.zeros((m,n))
             w = np.zeros((m,n))
 
             for i in xrange(m):
-                itemid = items[i]
+                userid = users[i]
 
                 for j in xrange(n):
-                    #print 'itemid is %d, j is %d'%(itemid,j)
-                    if itemid in self.items:
-                        ouid = self.items[itemid][j]
-                        if (ouid, itemid) in self.ratings:
-                            nratings[i,j] = self.ratings[(ouid,itemid)]
-                            w[i,j] = self.item_weights[itemid][j]
-                    else:
-                        pass
-                        #print 'itemid %d wasn\'t in self.items'%(itemid)
+                    #print 'userid is %d, j is %d'%(userid,j)
+                    #if userid in self.neighbors:
+                    #ouid = self.neighbors[userid][j]
+                    ouid = self.items[iid][j]
+                    #print ouid
+                    if (userid, ouid) in self.ratings:
+                        nratings[i,j] = self.ratings[(userid, ouid)]
+                        #w[i,j] = self.item_weights[userid][j]
+                        #print self.item_weights[iid][j]
+                        w[i,j] = self.item_weights[iid][j]
+                    #else:
+                        #pass
+                        #print 'userid %d wasn\'t in self.neighbors'%(userid)
 
             sw = np.sum(w,axis=1)
             keep = sw>0

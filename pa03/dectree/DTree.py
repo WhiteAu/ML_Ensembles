@@ -4,7 +4,7 @@ for categorical features. Handles multiple classes (not just binary).
 By default, uses the Gini index to select node splits.
 """
 import numpy as np
-from scoring import best_split
+from scoring import best_split, rand_split
 from Node import Inner, Leaf
 
 class DTree(object):
@@ -44,7 +44,7 @@ class DTree(object):
     def __repr__(self):
         return self.root.__repr__()
 
-    def train(self, maxdepth, verbose=0):
+    def train(self, maxdepth, rand=False, verbose=0):
         """
         Train the decision tree. Sets the root attribute as a side effect
 
@@ -55,10 +55,10 @@ class DTree(object):
         """
         indexes = np.arange(self.traindat.shape[0])
 
-        self.root, self.depth = self.train_helper(self.features_to_use, indexes, 0, maxdepth,verbose=verbose)
+        self.root, self.depth = self.train_helper(self.features_to_use, indexes, 0, maxdepth, rand=rand, verbose=verbose)
         self.optimal_depth = self.depth
 
-    def split_func(self, indxs, features_to_use):
+    def split_func(self, indxs, features_to_use, rand=False):
         """
         The function used to select the best splitting feature.
 
@@ -71,7 +71,10 @@ class DTree(object):
         features_left -- the set of features to consider on the left child of tree
         score -- the score of the best split
         """
-        return best_split(self.traindat.ix[indxs,:], features_to_use, self.label_name)
+        if not rand:
+            return best_split(self.traindat.ix[indxs,:], features_to_use, self.label_name)
+        else:
+            return rand_split(self.traindat.ix[indxs,:], features_to_use, self.label_name)
 
     def get_class_props(self, indxs):
         """
@@ -88,7 +91,7 @@ class DTree(object):
         class_labels = cnts.index
         return (dict(zip(class_labels, props)))
 
-    def train_helper(self, features_to_use, current_indexes, depth, maxdepth, verbose=0):
+    def train_helper(self, features_to_use, current_indexes, depth, maxdepth, rand=False, verbose=0):
         """
          Helper function for training
 
@@ -120,7 +123,7 @@ class DTree(object):
                 print 'returning:', out
             return out, depth
 
-        split, features_left, best_score = self.split_func(current_indexes, features_to_use)
+        split, features_left, best_score = self.split_func(current_indexes, features_to_use, rand)
         if split is None or not np.isfinite(best_score):
             out = Leaf(class_props, nex_node, nex_total, depth)
             if verbose>0:
@@ -132,8 +135,8 @@ class DTree(object):
             print len(current_indexes), len(split_indxs)
 
 
-        left,left_depth = self.train_helper(features_left, current_indexes[split_indxs], depth+1, maxdepth,verbose=verbose)
-        right,right_depth = self.train_helper(features_to_use, current_indexes[split_indxs != True], depth+1, maxdepth,verbose=verbose)
+        left,left_depth = self.train_helper(features_left, current_indexes[split_indxs], depth+1, maxdepth, rand=rand, verbose=verbose)
+        right,right_depth = self.train_helper(features_to_use, current_indexes[split_indxs != True], depth+1, maxdepth, rand=rand, verbose=verbose)
         out_depth = left_depth if left_depth > right_depth else right_depth
         out = Inner(class_props, nex_node, nex_total, split, left, right, depth)
         if verbose>0:
@@ -187,7 +190,7 @@ class DTree(object):
         dat.index = np.arange(dat.shape[0])
         return dat
 
-def get_tree(df, label_name, maxdepth=10, verbose=0):
+def get_tree(df, label_name, maxdepth=10, rand=False, verbose=0):
     """
     Get a decision tuned decision tree. Tuning is done on a held-aside tuning set with 20% of the data.
 
@@ -209,7 +212,7 @@ def get_tree(df, label_name, maxdepth=10, verbose=0):
     tune_indxs = indxs[ntrain:]
 
     dt=DTree(df.ix[train_indxs,:],label_name)
-    dt.train(maxdepth, verbose=verbose)
+    dt.train(maxdepth, rand=rand, verbose=verbose)
     dt.tune(df.ix[tune_indxs,:])
     return dt
 

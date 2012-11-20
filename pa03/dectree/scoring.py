@@ -2,6 +2,7 @@
 Utilities for scoring splits in a decision tree
 """
 import numpy as np
+import random as rd
 from Node import Split
 
 def gini(p):
@@ -153,6 +154,54 @@ def best_split(df, features_to_use, label_name):
 
     # find the index of best scoring split
     minIndx = np.argmin(scores)
+
+    # remove this feature from the set of features to use
+    # the left child doesn't need to look at this feature again
+    feature_index = np.where(feature_names==candidate_values[minIndx][0])[0]
+    features_left = np.delete(features_to_use, feature_index)
+    return Split(candidate_values[minIndx][0], candidate_values[minIndx][1]), features_left, scores[minIndx]
+    
+def rand_split(df, features_to_use, label_name):
+    """
+    Find the best split for examples
+
+    Arguments:
+    df -- pandas.DataFrame to use to find best split
+    features_to_use -- features to consider when splitting
+    label_name -- column in df containing class labels
+
+    Returns:
+    node -- an object of class Split describing split condition (None if no split possible)
+    features_left -- features to check for splitting in left child (None if no split possible)
+    score -- the score of best split (None if no split possible)
+    """
+
+    # get the names of the features to use
+    feature_names = df.columns.values[features_to_use]
+
+    # list of candidate splits
+    candidate_values = []
+
+    # add candidate values for each feature
+    for feature_name in feature_names:
+        candidate_values += get_candidate_values(df, feature_name)
+
+    # no candidate values, can't split here
+    if (len(candidate_values)==0):
+        return None, None, None
+
+
+    scores = np.inf * np.ones(len(candidate_values))
+    for j in range(len(candidate_values)):
+        feature_name = candidate_values[j][0]
+        feature_value = candidate_values[j][1]
+        res = score_feature_value(df, feature_name, feature_value, label_name)
+        scores[j] = res
+
+    # find the index of some rando split
+    rd.seed()
+    minIndx = rd.randint(0,len(scores)-1)
+    #minIndx = np.argmin(scores)
 
     # remove this feature from the set of features to use
     # the left child doesn't need to look at this feature again
